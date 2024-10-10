@@ -16,7 +16,7 @@ target = "card.lua"
 pattern = '''function Card:click()'''
 position = "after"
 payload = '''
-if hey_listen_for_voucher(self) then return end
+if HeyListen.listen(self) then return end
 '''
 match_indent = true
 overwrite = false
@@ -28,7 +28,7 @@ target = "functions/UI_definitions.lua"
 pattern = '''function G.UIDEF.shop()'''
 position = "after"
 payload = '''
-hey_listen_should_i_listen = true
+HeyListen.should_i_listen = true
 '''
 match_indent = true
 overwrite = false
