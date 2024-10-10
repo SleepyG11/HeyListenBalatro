@@ -3,6 +3,8 @@ HeyListen.should_i_listen = false
 HeyListen.vouchers_level = {
 	["v_clearance_sale"] = 1,
 	["v_liquidation"] = 2,
+	["v_money_mint"] = 3,
+	["v_cry_massproduct"] = 4,
 }
 HeyListen.config = {
 	notification_level = 2,
