@@ -16,7 +16,7 @@ target = "card.lua"
 pattern = '''function Card:click()'''
 position = "after"
 payload = '''
-if HeyListen.listen(self) then return end
+if HeyListen.on_shop_card_buy(self) then return end
 '''
 match_indent = true
 overwrite = false
@@ -28,7 +28,71 @@ target = "functions/UI_definitions.lua"
 pattern = '''function G.UIDEF.shop()'''
 position = "after"
 payload = '''
-HeyListen.should_i_listen = true
+HeyListen.reset_listening("shop_buy")
+HeyListen.reset_listening("shop_reroll")
+'''
+match_indent = true
+overwrite = false
+
+# Handle shop reroll
+[[patches]]
+[patches.pattern]
+target = "functions/button_callbacks.lua"
+pattern = '''G.FUNCS.reroll_shop = function(e)'''
+position = "after"
+payload = '''
+if HeyListen.on_shop_reroll(e) then return end
+'''
+match_indent = true
+overwrite = false
+
+# Handle blind select
+[[patches]]
+[patches.pattern]
+target = "functions/button_callbacks.lua"
+pattern = '''G.FUNCS.select_blind = function(e)'''
+position = "after"
+payload = '''
+if HeyListen.on_blind_select(e) then return end
+HeyListen.reset_listening("blind_select")
+'''
+match_indent = true
+overwrite = false
+
+# Handle go to menu
+[[patches]]
+[patches.pattern]
+target = "functions/button_callbacks.lua"
+pattern = '''G.FUNCS.go_to_menu = function(e)'''
+position = "after"
+payload = '''
+HeyListen.reset_listening()
+HeyListen.reset_listening_per_ante()
+'''
+match_indent = true
+overwrite = false
+
+# Handle ante up
+[[patches]]
+[patches.pattern]
+target = "functions/button_callbacks.lua"
+pattern = '''G.GAME.round_resets.boss_rerolled = false'''
+position = "after"
+payload = '''
+HeyListen.reset_listening_per_ante()
+'''
+match_indent = true
+overwrite = false
+
+# Handle booster skip
+[[patches]]
+[patches.pattern]
+target = "functions/button_callbacks.lua"
+pattern = '''G.FUNCS.skip_booster = function(e)'''
+position = "after"
+payload = '''
+if HeyListen.on_booster_skip(e) then return end
+HeyListen.reset_listening("booster_skip")
 '''
 match_indent = true
 overwrite = false
