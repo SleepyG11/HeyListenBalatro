@@ -7,7 +7,7 @@
 --- PRIORITY: 0
 --- DISPLAY_NAME: Hey, Listen!
 --- PREFIX: HeyListen
---- VERSION: 1.0.1
+--- VERSION: 1.0.2
 ----------------------------------------------
 ------------MOD CODE -------------------------
 
