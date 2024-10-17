@@ -30,6 +30,8 @@ position = "after"
 payload = '''
 HeyListen.reset_listening("shop_buy")
 HeyListen.reset_listening("shop_reroll")
+HeyListen.reset_listening("card_sell")
+HeyListen.reset_listening("card_use")
 '''
 match_indent = true
 overwrite = false
@@ -56,6 +58,8 @@ payload = '''
 if HeyListen.on_blind_select(e) then return end
 HeyListen.reset_listening("blind_select")
 HeyListen.reset_listening("hand_play")
+HeyListen.reset_listening("card_sell")
+HeyListen.reset_listening("card_use")
 '''
 match_indent = true
 overwrite = false
@@ -76,7 +80,7 @@ overwrite = false
 # Handle ante up
 [[patches]]
 [patches.pattern]
-target = "functions/button_callbacks.lua"
+target = "functions/common_events.lua"
 pattern = '''G.GAME.round_resets.boss_rerolled = false'''
 position = "after"
 payload = '''
@@ -106,6 +110,30 @@ pattern = '''G.FUNCS.play_cards_from_highlighted = function(e)'''
 position = "after"
 payload = '''
 if HeyListen.on_hand_play(e) then return end
+'''
+match_indent = true
+overwrite = false
+
+# Handle card sell
+[[patches]]
+[patches.pattern]
+target = "functions/button_callbacks.lua"
+pattern = '''G.FUNCS.sell_card = function(e)'''
+position = "after"
+payload = '''
+if HeyListen.on_card_sell(e, e.config.ref_table) then return end
+'''
+match_indent = true
+overwrite = false
+
+# Handle card use
+[[patches]]
+[patches.pattern]
+target = "functions/button_callbacks.lua"
+pattern = '''G.FUNCS.use_card = function(e, mute, nosave)'''
+position = "after"
+payload = '''
+if HeyListen.on_card_use(e, e.config.ref_table, mute, nosave) then return end
 '''
 match_indent = true
 overwrite = false

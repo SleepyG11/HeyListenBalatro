@@ -7,7 +7,7 @@
 --- PRIORITY: 0
 --- DISPLAY_NAME: Hey, Listen!
 --- PREFIX: HeyListen
---- VERSION: 1.0.2
+--- VERSION: 1.0.3-dev
 ----------------------------------------------
 ------------MOD CODE -------------------------
 
@@ -58,8 +58,30 @@ end
 
 HeyListen.UI = {}
 HeyListen.UI.PARTS = {
-	create_config_section = function(label, nodes)
+	create_option_cycle = function(label, options, key)
 		return {
+			n = G.UIT.C,
+			config = { align = "cm" },
+			nodes = {
+				create_option_cycle({
+					w = 4,
+					label = label,
+					scale = 0.6,
+					options = options,
+					opt_callback = "hey_listen_set_notification_level",
+					listener = key,
+					current_option = HeyListen.config.notification_levels[key],
+					col = true,
+				}),
+			},
+		}
+	end,
+
+	create_event_section = function(tab, event)
+		local ui_data = HeyListen.config_ui[tab].events[event]
+		local ui_listeners = ui_data.listeners
+
+		local result = {
 			n = G.UIT.R,
 			config = { align = "cm", padding = 0.05, colour = G.C.BLACK, r = 0.5, minw = 5 },
 			nodes = {
@@ -71,7 +93,7 @@ HeyListen.UI.PARTS = {
 							n = G.UIT.T,
 							config = {
 								align = "cm",
-								text = label,
+								text = ui_data.label,
 								colour = G.C.WHITE,
 								scale = 0.45,
 								shadow = true,
@@ -79,156 +101,78 @@ HeyListen.UI.PARTS = {
 						},
 					},
 				},
-				{
-					n = G.UIT.R,
-					config = { align = "cm" },
-					nodes = nodes,
-				},
 			},
 		}
+
+		local current_row = {}
+		local counter = 0
+		for k, v in pairs(ui_listeners) do
+			counter = counter + 1
+			if counter % 3 == 1 then
+				current_row = {}
+				table.insert(result.nodes, {
+					n = G.UIT.R,
+					config = { align = "cm" },
+					nodes = current_row,
+				})
+			end
+			table.insert(current_row, HeyListen.UI.PARTS.create_option_cycle(v.label, v.options, v.key))
+		end
+
+		return result
 	end,
-	create_section_separator = function()
+	create_event_section_separator = function()
 		return {
 			n = G.UIT.R,
 			config = { h = 0.1 },
 		}
 	end,
+
+	create_tab = function(tab)
+		local ui_data = HeyListen.config_ui[tab]
+		local ui_events = ui_data.events
+
+		local result = {
+			n = G.UIT.ROOT,
+			config = { align = "cm", padding = 0.05, colour = G.C.CLEAR },
+			nodes = {},
+		}
+
+		local sorted_events = {}
+		for event, v in pairs(ui_events) do
+			table.insert(sorted_events, event)
+		end
+		table.sort(sorted_events, function(a, b)
+			return a < b
+		end)
+		for _, event in ipairs(sorted_events) do
+			table.insert(result.nodes, HeyListen.UI.PARTS.create_event_section(tab, event))
+			table.insert(result.nodes, HeyListen.UI.PARTS.create_event_section_separator())
+		end
+
+		table.remove(result.nodes, #result.nodes)
+
+		return result
+	end,
+
+	create_extra_tabs = function()
+		local result = {}
+		for k, v in pairs(HeyListen.config_ui) do
+			table.insert(result, {
+				label = v.label,
+				tab_definition_function = function()
+					return HeyListen.UI.PARTS.create_tab(k)
+				end,
+			})
+		end
+		table.sort(result, function(a, b)
+			return a.label < b.label
+		end)
+		return result
+	end,
 }
 
-HeyListen.current_mod.extra_tabs = function()
-	return {
-		{
-			label = "Shop",
-			tab_definition_function = function()
-				return {
-					n = G.UIT.ROOT,
-					config = { align = "cm", padding = 0.05, colour = G.C.CLEAR },
-					nodes = {
-						HeyListen.UI.PARTS.create_config_section("On buy", {
-							create_option_cycle({
-								w = 4,
-								label = "Discount vouchers",
-								scale = 0.6,
-								options = {
-									"Never",
-									"Once per ante",
-									"Once per shop",
-								},
-								opt_callback = "hey_listen_set_notification_level",
-								listener = "sale_voucher",
-								current_option = HeyListen.config.notification_levels.sale_voucher,
-							}),
-						}),
-						HeyListen.UI.PARTS.create_section_separator(),
-						HeyListen.UI.PARTS.create_config_section("On shop reroll", {
-							{
-								n = G.UIT.C,
-								config = { align = "cm" },
-								nodes = {
-									create_option_cycle({
-										w = 4,
-										label = "Overstock vouchers",
-										scale = 0.6,
-										options = {
-											"Never",
-											"Once per ante",
-											"Once per shop",
-										},
-										opt_callback = "hey_listen_set_notification_level",
-										listener = "overstock_voucher",
-										current_option = HeyListen.config.notification_levels.overstock_voucher,
-									}),
-								},
-							},
-							{
-								n = G.UIT.C,
-								config = { align = "cm" },
-								nodes = {
-									create_option_cycle({
-										w = 4,
-										label = "Reroll discount vouchers",
-										scale = 0.6,
-										options = {
-											"Never",
-											"Once per ante",
-											"Once per shop",
-										},
-										opt_callback = "hey_listen_set_notification_level",
-										listener = "surplus_voucher",
-										current_option = HeyListen.config.notification_levels.surplus_voucher,
-									}),
-								},
-							},
-						}),
-						HeyListen.UI.PARTS.create_section_separator(),
-						HeyListen.UI.PARTS.create_config_section("On booster skip", {
-							create_option_cycle({
-								w = 4,
-								label = "Constellation on Celestial pack",
-								scale = 0.6,
-								options = {
-									"Never",
-									"Once per ante",
-									"Once per booster",
-								},
-								opt_callback = "hey_listen_set_notification_level",
-								listener = "constellation_joker",
-								current_option = HeyListen.config.notification_levels.constellation_joker,
-							}),
-						}),
-					},
-				}
-			end,
-		},
-		{
-			label = "Blind",
-			tab_definition_function = function()
-				return {
-					n = G.UIT.ROOT,
-					config = { align = "cm", padding = 0.05, colour = G.C.CLEAR },
-					nodes = {
-						HeyListen.UI.PARTS.create_config_section("On blind select", {
-							create_option_cycle({
-								w = 4,
-								label = "Ceremonial Dagger",
-								scale = 0.6,
-								options = {
-									"Never",
-									"Once per ante",
-									"Once per round",
-								},
-								opt_callback = "hey_listen_set_notification_level",
-								listener = "dagger_joker",
-								current_option = HeyListen.config.notification_levels.dagger_joker,
-							}),
-						}),
-						HeyListen.UI.PARTS.create_section_separator(),
-						HeyListen.UI.PARTS.create_config_section("On hand play", {
-							{
-								n = G.UIT.C,
-								config = { align = "cm" },
-								nodes = {
-									create_option_cycle({
-										w = 4,
-										label = "The Psychic boss blind",
-										scale = 0.6,
-										options = {
-											"Never",
-											"Once per ante",
-										},
-										opt_callback = "hey_listen_set_notification_level",
-										listener = "psychic_blind",
-										current_option = HeyListen.config.notification_levels.psychic_blind,
-									}),
-								},
-							},
-						}),
-					},
-				}
-			end,
-		},
-	}
-end
+HeyListen.current_mod.extra_tabs = HeyListen.UI.PARTS.create_extra_tabs
 
 SMODS.Atlas({
 	key = "modicon",

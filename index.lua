@@ -1,125 +1,58 @@
 HeyListen = {
 	should_i_not_listen = {},
 	should_i_not_listen_per_ante = {},
-	enums = {
-		sale_voucher_levels = {
-			["v_clearance_sale"] = 1,
-			["v_liquidation"] = 2,
-			["v_money_mint"] = 3,
-			["v_cry_massproduct"] = 4,
-		},
-		surplus_voucher_levels = {
-			["v_reroll_surplus"] = 1,
-			["v_reroll_glut"] = 2,
-		},
-		overstock_voucher_levels = {
-			["v_overstock_norm"] = 1,
-			["v_overstock_plus"] = 2,
-		},
-		dagger_levels = {
-			["j_ceremonial"] = 1,
-		},
-		constellation_levels = {
-			["j_constellation"] = 1,
-		},
-	},
 
-	orders = {
-		shop_buy = {
-			"sale_voucher",
+	orders = {},
+	listeners = {},
+
+	config_ui = {
+		shop = {
+			label = "Shop",
+			events = {
+				shop_buy = {
+					label = "On buy",
+					listeners = {},
+				},
+				shop_reroll = {
+					label = "On shop reroll",
+					listeners = {},
+				},
+			},
 		},
-		shop_reroll = {
-			"surplus_voucher",
-			"overstock_voucher",
+		blinds = {
+			label = "Blinds",
+			events = {
+				blind_select = {
+					label = "On blind select",
+					listeners = {},
+				},
+				hand_play = {
+					label = "On hand play",
+					listeners = {},
+				},
+			},
 		},
-		blind_select = {
-			"dagger_joker",
+		actions = {
+			label = "Actions",
+			events = {
+				card_sell = {
+					label = "On card sell",
+					listeners = {},
+				},
+				card_use = {
+					label = "On card use",
+					listeners = {},
+				},
+			},
 		},
-		booster_skip = {
-			"constellation_joker",
-		},
-		hand_play = {
-			"psychic_blind",
-		},
-	},
-	listeners = {
-		shop_buy = {
-			sale_voucher = function(card)
-				local hey_i_hear_voucher = HeyListen.utils.find_voucher_in_shop(HeyListen.enums.sale_voucher_levels)
-
-				if not hey_i_hear_voucher or hey_i_hear_voucher == card then
-					return false
-				end
-				if card.cost == 0 or G.GAME.dollars < (hey_i_hear_voucher.cost + card.cost) then
-					return false
-				end
-
-				return hey_i_hear_voucher, "top"
-			end,
-		},
-		shop_reroll = {
-			surplus_voucher = function()
-				local hey_i_hear_voucher = HeyListen.utils.find_voucher_in_shop(HeyListen.enums.surplus_voucher_levels)
-
-				if not hey_i_hear_voucher then
-					return false
-				end
-
-				if G.GAME.dollars < hey_i_hear_voucher.cost then
-					return false
-				end
-
-				return hey_i_hear_voucher, "top"
-			end,
-			overstock_voucher = function()
-				local hey_i_hear_voucher =
-					HeyListen.utils.find_voucher_in_shop(HeyListen.enums.overstock_voucher_levels)
-
-				if not hey_i_hear_voucher then
-					return false
-				end
-
-				if G.GAME.dollars < hey_i_hear_voucher.cost then
-					return false
-				end
-
-				return hey_i_hear_voucher, "top"
-			end,
-		},
-		blind_select = {
-			dagger_joker = function()
-				local hey_i_hear_dagger = HeyListen.utils.find_dagger_like_card_in_jokers(HeyListen.enums.dagger_levels)
-
-				if not hey_i_hear_dagger then
-					return false
-				end
-
-				return hey_i_hear_dagger, "bottom"
-			end,
-		},
-		booster_skip = {
-			constellation_joker = function()
-				if G.STATE ~= G.STATES.PLANET_PACK then
-					return false
-				end
-
-				local hey_i_hear_constellation =
-					HeyListen.utils.find_card_in_jokers(HeyListen.enums.constellation_levels)
-
-				if not hey_i_hear_constellation then
-					return false
-				end
-
-				return hey_i_hear_constellation, "bottom"
-			end,
-		},
-		hand_play = {
-			psychic_blind = function()
-				if G.GAME.blind.name ~= "The Psychic" or #G.hand.highlighted >= 5 then
-					return false
-				end
-				return G.GAME.blind, "blind_top"
-			end,
+		other = {
+			label = "Other",
+			events = {
+				booster_skip = {
+					label = "On booster skip",
+					listeners = {},
+				},
+			},
 		},
 	},
 
@@ -287,14 +220,7 @@ end
 ----
 
 HeyListen.config = {
-	notification_levels = {
-		sale_voucher = 2,
-		surplus_voucher = 2,
-		overstock_voucher = 2,
-		dagger_joker = 2,
-		constellation_joker = 2,
-		psychic_blind = 2,
-	},
+	notification_levels = {},
 }
 
 function HeyListen.save_config() end
@@ -302,10 +228,11 @@ function HeyListen.save_config() end
 --
 
 function HeyListen.process_event(event, options)
-	for _, listener in ipairs(HeyListen.orders[event]) do
-		local notif_level = HeyListen.config.notification_levels[listener]
+	for _, listener in ipairs(HeyListen.orders[event] or {}) do
+		local notif_level = HeyListen.config.notification_levels[event .. "/" .. listener]
 		if not HeyListen.get_should_i_not_listen(event, listener, notif_level) then
-			local notify_card, notify_align = HeyListen.listeners[event][listener](unpack(options.args or {}))
+			local handler = (HeyListen.listeners[event] or {})[listener] or function() end
+			local notify_card, notify_align = handler(options.args or {})
 			if notify_card then
 				HeyListen.set_should_i_not_listen(event, listener, notif_level)
 				HeyListen.utils.notify_card(notify_card, notify_align)
@@ -327,19 +254,19 @@ function HeyListen.on_shop_card_buy(card)
 	end
 
 	return HeyListen.process_event("shop_buy", {
-		args = { card },
+		args = { card = card },
 	})
 end
 
 function HeyListen.on_shop_reroll(button)
 	return HeyListen.process_event("shop_reroll", {
-		args = { button },
+		args = { button = button },
 	})
 end
 
 function HeyListen.on_blind_select(button)
 	return HeyListen.process_event("blind_select", {
-		args = { button },
+		args = { button = button },
 		after_notify = function()
 			button.disable_button = false
 		end,
@@ -348,7 +275,7 @@ end
 
 function HeyListen.on_booster_skip(button)
 	return HeyListen.process_event("booster_skip", {
-		args = { button },
+		args = { button = button },
 		after_notify = function()
 			button.disable_button = false
 		end,
@@ -357,9 +284,226 @@ end
 
 function HeyListen.on_hand_play(button)
 	return HeyListen.process_event("hand_play", {
-		args = { button },
+		args = { button = button },
 		after_notify = function()
 			button.disable_button = false
 		end,
 	})
 end
+
+function HeyListen.on_card_sell(button, card)
+	return HeyListen.process_event("card_sell", {
+		args = { button = button, card = card },
+	})
+end
+
+function HeyListen.on_card_use(button, card, mute, nosave)
+	return HeyListen.process_event("card_use", {
+		args = { button = button, card = card, mute = mute, nosave = nosave },
+	})
+end
+
+--
+
+--- Add event listener
+--- @param options { event: string, key: string, listener: function, key_pos?: integer, config_default?: integer, config_label: string, config_options: string[] }
+function HeyListen.add_event_listener(options)
+	local event = options.event
+	local listener = options.key
+
+	local handler = options.listener
+	assert(
+		type(handler) == "function",
+		"[HeyListen] Trying to add listener without handler function: " .. event .. "/" .. listener
+	)
+
+	if not HeyListen.orders[event] then
+		HeyListen.orders[event] = {}
+	end
+	local order_list = HeyListen.orders[event]
+	for _, current_listener in ipairs(order_list) do
+		assert(current_listener ~= listener, "[HeyListen] Listener key already used: " .. event .. "/" .. listener)
+	end
+	if options.key_pos then
+		table.insert(order_list, options.key_pos, listener)
+	else
+		table.insert(order_list, listener)
+	end
+	if not HeyListen.listeners[event] then
+		HeyListen.listeners[event] = {}
+	end
+	HeyListen.listeners[event][listener] = handler
+
+	local config_key = event .. "/" .. listener
+	if not HeyListen.config.notification_levels[config_key] then
+		HeyListen.config.notification_levels[config_key] =
+			math.min(3, math.max(1, math.floor(options.config_default or 2)))
+	end
+
+	for k, v in pairs(HeyListen.config_ui) do
+		local event_block = v.events[event]
+		if event_block then
+			event_block.listeners[listener] = {
+				key = config_key,
+				label = options.config_label or config_key,
+				options = options.config_options,
+			}
+			return
+		end
+	end
+end
+
+--
+
+HeyListen.add_event_listener({
+	event = "shop_buy",
+	key = "sale_voucher",
+	config_label = "Discount vouchers",
+	config_options = {
+		"Never",
+		"Once per ante",
+		"Once per shop",
+	},
+	config_default = 2,
+	listener = function(ctx)
+		local card = ctx.card
+		local levels = {
+			["v_clearance_sale"] = 1,
+			["v_liquidation"] = 2,
+			["v_money_mint"] = 3,
+			["v_cry_massproduct"] = 4,
+		}
+		local hey_i_hear_voucher = HeyListen.utils.find_voucher_in_shop(levels)
+
+		if not hey_i_hear_voucher or hey_i_hear_voucher == card then
+			return false
+		end
+		if card.cost == 0 or G.GAME.dollars < (hey_i_hear_voucher.cost + card.cost) then
+			return false
+		end
+
+		return hey_i_hear_voucher, "top"
+	end,
+})
+HeyListen.add_event_listener({
+	event = "shop_reroll",
+	key = "surplus_voucher",
+	config_label = "Reroll discount vouchers",
+	config_options = {
+		"Never",
+		"Once per ante",
+		"Once per shop",
+	},
+	config_default = 2,
+	listener = function(ctx)
+		local levels = {
+			["v_reroll_surplus"] = 1,
+			["v_reroll_glut"] = 2,
+		}
+
+		local hey_i_hear_voucher = HeyListen.utils.find_voucher_in_shop(levels)
+
+		if not hey_i_hear_voucher then
+			return false
+		end
+
+		if G.GAME.dollars < hey_i_hear_voucher.cost then
+			return false
+		end
+
+		return hey_i_hear_voucher, "top"
+	end,
+})
+HeyListen.add_event_listener({
+	event = "shop_reroll",
+	key = "overstock_voucher",
+	config_label = "Overstock vouchers",
+	config_options = {
+		"Never",
+		"Once per ante",
+		"Once per shop",
+	},
+	config_default = 2,
+	listener = function(ctx)
+		local levels = {
+			["v_reroll_surplus"] = 1,
+			["v_reroll_glut"] = 2,
+		}
+
+		local hey_i_hear_voucher = HeyListen.utils.find_voucher_in_shop(levels)
+
+		if not hey_i_hear_voucher then
+			return false
+		end
+
+		if G.GAME.dollars < hey_i_hear_voucher.cost then
+			return false
+		end
+
+		return hey_i_hear_voucher, "top"
+	end,
+})
+HeyListen.add_event_listener({
+	event = "blind_select",
+	key = "dagger_joker",
+	config_label = "Ceremonial Dagger",
+	config_options = {
+		"Never",
+		"Once per ante",
+		"Once per round",
+	},
+	config_default = 2,
+	listener = function(ctx)
+		local hey_i_hear_dagger = HeyListen.utils.find_dagger_like_card_in_jokers({
+			["j_ceremonial"] = 1,
+		})
+
+		if not hey_i_hear_dagger then
+			return false
+		end
+
+		return hey_i_hear_dagger, "bottom"
+	end,
+})
+HeyListen.add_event_listener({
+	event = "booster_skip",
+	key = "constellation_joker",
+	config_label = "Constellation on Celestial pack",
+	config_options = {
+		"Never",
+		"Once per ante",
+		"Once per booster",
+	},
+	config_default = 2,
+	listener = function(ctx)
+		if G.STATE ~= G.STATES.PLANET_PACK then
+			return false
+		end
+
+		local hey_i_hear_constellation = HeyListen.utils.find_card_in_jokers({
+			["j_constellation"] = 1,
+		})
+
+		if not hey_i_hear_constellation then
+			return false
+		end
+
+		return hey_i_hear_constellation, "bottom"
+	end,
+})
+HeyListen.add_event_listener({
+	event = "hand_play",
+	key = "psychic_blind",
+	config_label = "The Psychic boss blind",
+	config_options = {
+		"Never",
+		"Once per ante",
+	},
+	config_default = 2,
+	listener = function(ctx)
+		if G.GAME.blind.name ~= "The Psychic" or #G.hand.highlighted >= 5 then
+			return false
+		end
+		return G.GAME.blind, "blind_top"
+	end,
+})
