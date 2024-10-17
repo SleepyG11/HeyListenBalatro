@@ -55,6 +55,7 @@ position = "after"
 payload = '''
 if HeyListen.on_blind_select(e) then return end
 HeyListen.reset_listening("blind_select")
+HeyListen.reset_listening("hand_play")
 '''
 match_indent = true
 overwrite = false
@@ -93,6 +94,18 @@ position = "after"
 payload = '''
 if HeyListen.on_booster_skip(e) then return end
 HeyListen.reset_listening("booster_skip")
+'''
+match_indent = true
+overwrite = false
+
+# Handle playing hand
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+pattern = '''G.FUNCS.play_cards_from_highlighted = function(e)'''
+position = "after"
+payload = '''
+if HeyListen.on_hand_play(e) then return end
 '''
 match_indent = true
 overwrite = false

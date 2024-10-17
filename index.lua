@@ -33,10 +33,13 @@ HeyListen = {
 			"overstock_voucher",
 		},
 		blind_select = {
-			"dagger",
+			"dagger_joker",
 		},
 		booster_skip = {
-			"constellation",
+			"constellation_joker",
+		},
+		hand_play = {
+			"psychic_blind",
 		},
 	},
 	listeners = {
@@ -84,7 +87,7 @@ HeyListen = {
 			end,
 		},
 		blind_select = {
-			dagger = function()
+			dagger_joker = function()
 				local hey_i_hear_dagger = HeyListen.utils.find_dagger_like_card_in_jokers(HeyListen.enums.dagger_levels)
 
 				if not hey_i_hear_dagger then
@@ -95,7 +98,7 @@ HeyListen = {
 			end,
 		},
 		booster_skip = {
-			constellation = function()
+			constellation_joker = function()
 				if G.STATE ~= G.STATES.PLANET_PACK then
 					return false
 				end
@@ -108,6 +111,14 @@ HeyListen = {
 				end
 
 				return hey_i_hear_constellation, "bottom"
+			end,
+		},
+		hand_play = {
+			psychic_blind = function()
+				if G.GAME.blind.name ~= "The Psychic" or #G.hand.highlighted >= 5 then
+					return false
+				end
+				return G.GAME.blind, "blind_top"
 			end,
 		},
 	},
@@ -193,29 +204,29 @@ HeyListen = {
 			if not card then
 				return
 			end
+			local card_align, card_offset = nil, nil
 			if align == "top" then
-				attention_text({
-					text = "Hey, Listen!",
-					scale = 0.6,
-					hold = 1.25,
-					backdrop_colour = HEX("31cdf6"),
-					align = "tm",
-					major = card,
-					offset = { x = 0, y = -0.05 * G.CARD_H },
-				})
+				card_align = "tm"
+				card_offset = -0.05 * G.CARD_H
 			elseif align == "bottom" then
-				attention_text({
-					text = "Hey, Listen!",
-					scale = 0.6,
-					hold = 1.25,
-					backdrop_colour = HEX("31cdf6"),
-					align = "bm",
-					major = card,
-					offset = { x = 0, y = 0.05 * G.CARD_H },
-				})
-			else
+				card_align = "bm"
+				card_offset = 0.05 * G.CARD_H
+			elseif align == "blind_top" then
+				card_align = "tm"
+				card_offset = -0.05 * 2
+			end
+			if not card_align or not card_offset then
 				return
 			end
+			attention_text({
+				text = "Hey, Listen!",
+				scale = 0.6,
+				hold = 1.25,
+				backdrop_colour = HEX("31cdf6"),
+				align = card_align,
+				major = card,
+				offset = { x = 0, y = card_offset },
+			})
 			card:juice_up(0.4, 0.4)
 			play_sound("foil2", 0.8, 0.3)
 		end,
@@ -280,8 +291,9 @@ HeyListen.config = {
 		sale_voucher = 2,
 		surplus_voucher = 2,
 		overstock_voucher = 2,
-		dagger = 2,
-		constellation = 2,
+		dagger_joker = 2,
+		constellation_joker = 2,
+		psychic_blind = 2,
 	},
 }
 
@@ -336,6 +348,15 @@ end
 
 function HeyListen.on_booster_skip(button)
 	return HeyListen.process_event("booster_skip", {
+		args = { button },
+		after_notify = function()
+			button.disable_button = false
+		end,
+	})
+end
+
+function HeyListen.on_hand_play(button)
+	return HeyListen.process_event("hand_play", {
 		args = { button },
 		after_notify = function()
 			button.disable_button = false
