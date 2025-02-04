@@ -50,7 +50,7 @@ HeyListen = {
 				if not hey_i_hear_voucher or hey_i_hear_voucher == card then
 					return false
 				end
-				if card.cost == 0 or G.GAME.dollars < (hey_i_hear_voucher.cost + card.cost) then
+				if to_big(card.cost) == to_big(0) or to_big(G.GAME.dollars) < to_big((hey_i_hear_voucher.cost + card.cost)) then
 					return false
 				end
 
@@ -362,4 +362,8 @@ function HeyListen.on_hand_play(button)
 			button.disable_button = false
 		end,
 	})
+end
+
+to_big = to_big or function(x, y)
+    return x
 end
